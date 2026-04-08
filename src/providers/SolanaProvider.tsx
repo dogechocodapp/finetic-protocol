@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useMemo, ReactNode } from 'react';
@@ -8,10 +9,14 @@ import { clusterApiUrl } from '@solana/web3.js';
 
 import '@solana/wallet-adapter-react-ui/styles.css';
 
+const CP = ConnectionProvider as any;
+const WP = WalletProvider as any;
+const WMP = WalletModalProvider as any;
+
 export function SolanaProvider({ children }: { children: ReactNode }) {
   const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet';
   const endpoint = useMemo(
-    () => process.env.NEXT_PUBLIC_SOLANA_RPC_URL || clusterApiUrl(network as any),
+    () => process.env.NEXT_PUBLIC_SOLANA_RPC_URL || clusterApiUrl(network as 'devnet' | 'mainnet-beta'),
     [network]
   );
 
@@ -24,13 +29,10 @@ export function SolanaProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    // @ts-expect-error React 18 type mismatch with wallet adapter
-    <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
-        <WalletModalProvider>
-          {children}
-        </WalletModalProvider>
-      </WalletProvider>
-    </ConnectionProvider>
+    <CP endpoint={endpoint}>
+      <WP wallets={wallets} autoConnect>
+        <WMP>{children}</WMP>
+      </WP>
+    </CP>
   );
 }
