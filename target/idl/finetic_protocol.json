@@ -4,6 +4,7 @@
   "instructions": [
     {
       "name": "initialize",
+      "discriminator": [175,175,109,31,13,152,155,237],
       "accounts": [
         { "name": "protocolState", "isMut": true, "isSigner": false },
         { "name": "admin", "isMut": true, "isSigner": true },
@@ -15,6 +16,7 @@
     },
     {
       "name": "createOffer",
+      "discriminator": [237,233,192,168,248,7,249,241],
       "accounts": [
         { "name": "offer", "isMut": true, "isSigner": false },
         { "name": "lender", "isMut": true, "isSigner": true },
@@ -31,6 +33,7 @@
     },
     {
       "name": "cancelOffer",
+      "discriminator": [92,203,223,40,92,89,53,119],
       "accounts": [
         { "name": "offer", "isMut": true, "isSigner": false },
         { "name": "lender", "isMut": false, "isSigner": true }
@@ -39,6 +42,7 @@
     },
     {
       "name": "executeLoan",
+      "discriminator": [125,183,104,22,229,31,205,136],
       "accounts": [
         { "name": "offer", "isMut": true, "isSigner": false },
         { "name": "loan", "isMut": true, "isSigner": false },
@@ -63,6 +67,7 @@
     },
     {
       "name": "repayLoan",
+      "discriminator": [224,93,144,77,61,17,137,54],
       "accounts": [
         { "name": "loan", "isMut": true, "isSigner": false },
         { "name": "protocolState", "isMut": false, "isSigner": false },
@@ -78,6 +83,7 @@
     },
     {
       "name": "claimDefault",
+      "discriminator": [12,132,209,37,163,22,128,241],
       "accounts": [
         { "name": "loan", "isMut": true, "isSigner": false },
         { "name": "protocolState", "isMut": false, "isSigner": false },
@@ -90,6 +96,7 @@
     },
     {
       "name": "renewLoan",
+      "discriminator": [109,165,4,234,254,152,155,113],
       "accounts": [
         { "name": "oldLoan", "isMut": true, "isSigner": false },
         { "name": "newLoan", "isMut": true, "isSigner": false },
@@ -109,6 +116,7 @@
     },
     {
       "name": "setPaused",
+      "discriminator": [91,60,125,192,176,225,166,218],
       "accounts": [
         { "name": "protocolState", "isMut": true, "isSigner": false },
         { "name": "admin", "isMut": false, "isSigner": true }
@@ -119,6 +127,75 @@
     }
   ],
   "accounts": [
+    {
+      "name": "ProtocolState",
+      "discriminator": [29,20,197,95,184,97,15,52],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "admin", "type": "publicKey" },
+          { "name": "feeWallet", "type": "publicKey" },
+          { "name": "insuranceWallet", "type": "publicKey" },
+          { "name": "totalLoans", "type": "u64" },
+          { "name": "totalVolume", "type": "u64" },
+          { "name": "totalFeesCollected", "type": "u64" },
+          { "name": "bump", "type": "u8" },
+          { "name": "isPaused", "type": "bool" },
+          { "name": "version", "type": "u8" },
+          { "name": "reserved", "type": "bytes" }
+        ]
+      }
+    },
+    {
+      "name": "Offer",
+      "discriminator": [164,139,77,35,161,172,138,120],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "offerId", "type": "u64" },
+          { "name": "lender", "type": "publicKey" },
+          { "name": "stableMint", "type": "publicKey" },
+          { "name": "amount", "type": "u64" },
+          { "name": "minAmount", "type": "u64" },
+          { "name": "interestTier", "type": "u8" },
+          { "name": "termMonths", "type": "u8" },
+          { "name": "isActive", "type": "bool" },
+          { "name": "createdAt", "type": "i64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "Loan",
+      "discriminator": [10,39,88,58,103,86,200,190],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "loanId", "type": "u64" },
+          { "name": "offerId", "type": "u64" },
+          { "name": "lender", "type": "publicKey" },
+          { "name": "borrower", "type": "publicKey" },
+          { "name": "stableMint", "type": "publicKey" },
+          { "name": "collateralMint", "type": "publicKey" },
+          { "name": "loanAmount", "type": "u64" },
+          { "name": "collateralAmount", "type": "u64" },
+          { "name": "interestTier", "type": "u8" },
+          { "name": "interestFeeBps", "type": "u64" },
+          { "name": "originationFee", "type": "u64" },
+          { "name": "insuranceReserve", "type": "u64" },
+          { "name": "termMonths", "type": "u8" },
+          { "name": "startedAt", "type": "i64" },
+          { "name": "maturesAt", "type": "i64" },
+          { "name": "repaidAt", "type": "i64" },
+          { "name": "status", "type": { "defined": "LoanStatus" } },
+          { "name": "referralPlatform", "type": "publicKey" },
+          { "name": "renewalCount", "type": "u8" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    }
+  ],
+  "types": [
     {
       "name": "ProtocolState",
       "type": {
@@ -182,9 +259,7 @@
           { "name": "bump", "type": "u8" }
         ]
       }
-    }
-  ],
-  "types": [
+    },
     {
       "name": "LoanStatus",
       "type": {
