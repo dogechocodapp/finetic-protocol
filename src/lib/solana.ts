@@ -1,8 +1,8 @@
 import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
 import { Program, AnchorProvider, BN } from '@coral-xyz/anchor';
 
-// Program ID — replace with actual deployed address
-export const FINETIC_PROGRAM_ID = new PublicKey('FNtc1111111111111111111111111111111111111111');
+// Program ID — deployed to Solana devnet
+export const FINETIC_PROGRAM_ID = new PublicKey('3vhsPAwd9XFBidzPBxZfyrHKrF1G12qMuyaM6fwVbC8Q');
 
 // Solana connection
 const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet';

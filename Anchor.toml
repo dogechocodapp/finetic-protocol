@@ -1,0 +1,16 @@
+[features]
+seeds = false
+skip-lint = false
+
+[programs.devnet]
+finetic_protocol = "3vhsPAwd9XFBidzPBxZfyrHKrF1G12qMuyaM6fwVbC8Q"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "echo 'no tests yet'"

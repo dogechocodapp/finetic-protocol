@@ -31,5 +31,13 @@ next-env.d.ts
 # vercel
 .vercel
 
+# rust/anchor
+target/deploy/
+target/release/
+target/sbf-solana-solana/
+target/.rustc_info.json
+test-ledger/
+Cargo.lock
+
 # claude
 .claude/

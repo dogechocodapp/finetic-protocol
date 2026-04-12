@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
 
-declare_id!("FNtc1111111111111111111111111111111111111111");
+declare_id!("3vhsPAwd9XFBidzPBxZfyrHKrF1G12qMuyaM6fwVbC8Q");
 
 #[program]
 pub mod finetic_protocol {
@@ -25,10 +25,10 @@ pub mod finetic_protocol {
     pub fn create_offer(
         ctx: Context<CreateOffer>,
         offer_id: u64,
-        amount: u64,              // loan amount in stablecoin (smallest unit)
-        interest_tier: u8,        // 0 = standard (10%), 1 = high (20%)
-        term_months: u8,          // 12 or 24
-        min_amount: u64,          // minimum loan accepted
+        amount: u64,
+        interest_tier: u8,
+        term_months: u8,
+        min_amount: u64,
     ) -> Result<()> {
         require!(interest_tier <= 1, FineticError::InvalidTier);
         require!(term_months == 12 || term_months == 24, FineticError::InvalidTerm);
@@ -74,7 +74,6 @@ pub mod finetic_protocol {
     }
 
     /// Borrower accepts offer: deposits collateral, lender funds loan
-    /// This is the core escrow function
     pub fn execute_loan(
         ctx: Context<ExecuteLoan>,
         loan_id: u64,
@@ -83,7 +82,7 @@ pub mod finetic_protocol {
     ) -> Result<()> {
         let offer = &mut ctx.accounts.offer;
         let protocol = &ctx.accounts.protocol_state;
-        
+
         require!(!protocol.is_paused, FineticError::ProtocolPaused);
         require!(offer.is_active, FineticError::OfferNotActive);
         require!(loan_amount <= offer.amount, FineticError::ExceedsOffer);
@@ -91,8 +90,8 @@ pub mod finetic_protocol {
 
         // Calculate fees based on tier
         let (origination_bps, interest_fee_bps) = match offer.interest_tier {
-            0 => (150u64, 150u64),  // standard: 1.5% origination, 1.5% interest fee
-            1 => (200u64, 200u64),  // high: 2% origination, 2% interest fee
+            0 => (150u64, 150u64),
+            1 => (200u64, 200u64),
             _ => return Err(FineticError::InvalidTier.into()),
         };
 
@@ -103,7 +102,7 @@ pub mod finetic_protocol {
             .unwrap();
 
         let insurance_reserve = loan_amount
-            .checked_mul(50)  // 0.5%
+            .checked_mul(50)
             .unwrap()
             .checked_div(10000)
             .unwrap();
@@ -172,7 +171,7 @@ pub mod finetic_protocol {
         loan.started_at = now;
         loan.matures_at = now + term_seconds;
         loan.status = LoanStatus::Active;
-        loan.referral_platform = Pubkey::default(); // set if from SDK partner
+        loan.referral_platform = Pubkey::default();
         loan.bump = ctx.bumps.loan;
 
         // Mark offer as matched (or reduce remaining amount)
@@ -183,7 +182,7 @@ pub mod finetic_protocol {
         }
 
         // Update protocol stats
-        let protocol_state = &mut ctx.accounts.protocol_state_mut;
+        let protocol_state = &mut ctx.accounts.protocol_state;
         protocol_state.total_loans += 1;
         protocol_state.total_volume += loan_amount;
         protocol_state.total_fees_collected += origination_fee;
@@ -213,15 +212,14 @@ pub mod finetic_protocol {
 
         // Calculate interest owed
         let interest_rate = match loan.interest_tier {
-            0 => 1000u64, // 10% in bps
-            1 => 2000u64, // 20% in bps
+            0 => 1000u64,
+            1 => 2000u64,
             _ => return Err(FineticError::InvalidTier.into()),
         };
 
         let elapsed_seconds = (now - loan.started_at) as u64;
         let year_seconds = 365u64 * 24 * 60 * 60;
 
-        // Pro-rata interest: principal * rate * (elapsed / year)
         let interest_owed = loan.loan_amount
             .checked_mul(interest_rate)
             .unwrap()
@@ -230,7 +228,6 @@ pub mod finetic_protocol {
             .checked_div(10000u64.checked_mul(year_seconds).unwrap())
             .unwrap();
 
-        // Platform fee on interest
         let platform_interest_fee = interest_owed
             .checked_mul(loan.interest_fee_bps)
             .unwrap()
@@ -295,16 +292,15 @@ pub mod finetic_protocol {
             loan.collateral_amount,
         )?;
 
-        // Determine score event based on timing
         let term_seconds = (loan.term_months as i64) * 30 * 24 * 60 * 60;
         let half_term = loan.started_at + (term_seconds / 2);
 
         loan.status = if now < half_term {
-            LoanStatus::RepaidEarly50    // +150 pts
+            LoanStatus::RepaidEarly50
         } else if now < loan.matures_at {
-            LoanStatus::RepaidEarly      // +100 pts
+            LoanStatus::RepaidEarly
         } else {
-            LoanStatus::RepaidOnTime     // +50 pts
+            LoanStatus::RepaidOnTime
         };
 
         loan.repaid_at = now;
@@ -331,7 +327,6 @@ pub mod finetic_protocol {
         require!(loan.lender == ctx.accounts.lender.key(), FineticError::Unauthorized);
         require!(now > loan.matures_at, FineticError::LoanNotExpired);
 
-        // Transfer collateral to lender
         let loan_id_bytes = loan.loan_id.to_le_bytes();
         let seeds = &[
             b"loan",
@@ -352,10 +347,6 @@ pub mod finetic_protocol {
             ),
             loan.collateral_amount,
         )?;
-
-        // Transfer insurance reserve (0.5%) from Finetic to lender
-        // This is handled off-chain by the protocol — Finetic sacrifices margin
-        // The on-chain event signals the backend to execute the insurance payout
 
         loan.status = LoanStatus::Defaulted;
 
@@ -380,11 +371,10 @@ pub mod finetic_protocol {
 
         require!(old_loan.status == LoanStatus::Active, FineticError::LoanNotActive);
         require!(
-            now >= old_loan.matures_at - (7 * 24 * 60 * 60), // within 7 days of maturity
+            now >= old_loan.matures_at - (7 * 24 * 60 * 60),
             FineticError::TooEarlyToRenew
         );
 
-        // Calculate accumulated interest on old loan
         let old_interest_rate = match old_loan.interest_tier {
             0 => 1000u64,
             1 => 2000u64,
@@ -401,19 +391,13 @@ pub mod finetic_protocol {
             .checked_div(10000u64.checked_mul(year_seconds).unwrap())
             .unwrap();
 
-        // New interest tier = doubled
         let new_tier = match old_loan.interest_tier {
-            0 => 1u8,  // 10% -> 20%
-            1 => 1u8,  // 20% stays 20% (max)
+            0 => 1u8,
+            1 => 1u8,
             _ => return Err(FineticError::InvalidTier.into()),
         };
 
-        // New origination fee (Finetic earns again)
-        let new_origination_bps = match new_tier {
-            0 => 150u64,
-            1 => 200u64,
-            _ => return Err(FineticError::InvalidTier.into()),
-        };
+        let new_origination_bps: u64 = 200; // always high tier on renewal
 
         let new_debt = old_loan.loan_amount.checked_add(accumulated_interest).unwrap();
         let new_origination_fee = new_debt
@@ -435,10 +419,8 @@ pub mod finetic_protocol {
             new_origination_fee,
         )?;
 
-        // Close old loan
         old_loan.status = LoanStatus::Renewed;
 
-        // Create new loan with accumulated debt
         let new_loan = &mut ctx.accounts.new_loan;
         let term_seconds = (old_loan.term_months as i64) * 30 * 24 * 60 * 60;
 
@@ -451,7 +433,7 @@ pub mod finetic_protocol {
         new_loan.loan_amount = new_debt;
         new_loan.collateral_amount = old_loan.collateral_amount;
         new_loan.interest_tier = new_tier;
-        new_loan.interest_fee_bps = match new_tier { 0 => 150, _ => 200 };
+        new_loan.interest_fee_bps = 200;
         new_loan.origination_fee = new_origination_fee;
         new_loan.insurance_reserve = new_debt.checked_mul(50).unwrap().checked_div(10000).unwrap();
         new_loan.term_months = old_loan.term_months;
@@ -532,7 +514,7 @@ pub struct CancelOffer<'info> {
 #[instruction(loan_id: u64)]
 pub struct ExecuteLoan<'info> {
     #[account(mut)]
-    pub offer: Account<'info, Offer>,
+    pub offer: Box<Account<'info, Offer>>,
     #[account(
         init,
         payer = borrower,
@@ -540,34 +522,31 @@ pub struct ExecuteLoan<'info> {
         seeds = [b"loan", loan_id.to_le_bytes().as_ref()],
         bump
     )]
-    pub loan: Account<'info, Loan>,
+    pub loan: Box<Account<'info, Loan>>,
     #[account(mut, seeds = [b"protocol"], bump = protocol_state.bump)]
-    pub protocol_state: Account<'info, ProtocolState>,
-    /// Mutable alias for updating stats
-    #[account(mut, seeds = [b"protocol"], bump = protocol_state.bump)]
-    pub protocol_state_mut: Account<'info, ProtocolState>,
-    
+    pub protocol_state: Box<Account<'info, ProtocolState>>,
+
     // Parties
     #[account(mut)]
     pub lender: Signer<'info>,
     #[account(mut)]
     pub borrower: Signer<'info>,
-    
+
     // Mints
     pub collateral_mint: Account<'info, Mint>,
-    
+
     // Token accounts
     #[account(mut)]
-    pub borrower_collateral_account: Account<'info, TokenAccount>,
+    pub borrower_collateral_account: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    pub escrow_collateral_account: Account<'info, TokenAccount>,
+    pub escrow_collateral_account: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    pub lender_stable_account: Account<'info, TokenAccount>,
+    pub lender_stable_account: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    pub borrower_stable_account: Account<'info, TokenAccount>,
+    pub borrower_stable_account: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    pub fee_account: Account<'info, TokenAccount>,
-    
+    pub fee_account: Box<Account<'info, TokenAccount>>,
+
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
@@ -578,7 +557,7 @@ pub struct RepayLoan<'info> {
     pub loan: Account<'info, Loan>,
     #[account(mut)]
     pub borrower: Signer<'info>,
-    
+
     #[account(mut)]
     pub borrower_stable_account: Account<'info, TokenAccount>,
     #[account(mut)]
@@ -589,7 +568,7 @@ pub struct RepayLoan<'info> {
     pub escrow_collateral_account: Account<'info, TokenAccount>,
     #[account(mut)]
     pub borrower_collateral_account: Account<'info, TokenAccount>,
-    
+
     pub token_program: Program<'info, Token>,
 }
 
@@ -599,12 +578,12 @@ pub struct ClaimDefault<'info> {
     pub loan: Account<'info, Loan>,
     #[account(mut)]
     pub lender: Signer<'info>,
-    
+
     #[account(mut)]
     pub escrow_collateral_account: Account<'info, TokenAccount>,
     #[account(mut)]
     pub lender_collateral_account: Account<'info, TokenAccount>,
-    
+
     pub token_program: Program<'info, Token>,
 }
 
@@ -621,16 +600,16 @@ pub struct RenewLoan<'info> {
         bump
     )]
     pub new_loan: Account<'info, Loan>,
-    
+
     #[account(mut)]
     pub borrower: Signer<'info>,
-    pub lender: Signer<'info>,  // both must sign renewal
-    
+    pub lender: Signer<'info>,
+
     #[account(mut)]
     pub borrower_stable_account: Account<'info, TokenAccount>,
     #[account(mut)]
     pub fee_account: Account<'info, TokenAccount>,
-    
+
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
@@ -667,7 +646,7 @@ pub struct Offer {
     pub stable_mint: Pubkey,
     pub amount: u64,
     pub min_amount: u64,
-    pub interest_tier: u8,    // 0 = 10%, 1 = 20%
+    pub interest_tier: u8,
     pub term_months: u8,
     pub is_active: bool,
     pub created_at: i64,
@@ -705,11 +684,11 @@ pub struct Loan {
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, InitSpace)]
 pub enum LoanStatus {
     Active,
-    RepaidEarly50,    // before 50% term — +150 pts
-    RepaidEarly,      // before maturity — +100 pts
-    RepaidOnTime,     // at maturity — +50 pts
-    Renewed,          // rolled into new loan — +10 pts
-    Defaulted,        // lender claimed collateral — -200 pts
+    RepaidEarly50,
+    RepaidEarly,
+    RepaidOnTime,
+    Renewed,
+    Defaulted,
 }
 
 // ============================================
