@@ -41,3 +41,4 @@ Cargo.lock
 
 # claude
 .claude/
+.deploy-recovery.txt

@@ -689,9 +689,9 @@ pub struct RepayLoan<'info> {
         bump = loan.bump,
         has_one = borrower @ FineticError::Unauthorized
     )]
-    pub loan: Account<'info, Loan>,
+    pub loan: Box<Account<'info, Loan>>,
     #[account(seeds = [b"protocol"], bump = protocol_state.bump)]
-    pub protocol_state: Account<'info, ProtocolState>,
+    pub protocol_state: Box<Account<'info, ProtocolState>>,
     #[account(mut)]
     pub borrower: Signer<'info>,
 
@@ -700,31 +700,31 @@ pub struct RepayLoan<'info> {
         constraint = borrower_stable_account.owner == borrower.key() @ FineticError::InvalidTokenAccount,
         constraint = borrower_stable_account.mint == loan.stable_mint @ FineticError::MintMismatch
     )]
-    pub borrower_stable_account: Account<'info, TokenAccount>,
+    pub borrower_stable_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         constraint = lender_stable_account.owner == loan.lender @ FineticError::InvalidTokenAccount,
         constraint = lender_stable_account.mint == loan.stable_mint @ FineticError::MintMismatch
     )]
-    pub lender_stable_account: Account<'info, TokenAccount>,
+    pub lender_stable_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         constraint = fee_account.owner == protocol_state.fee_wallet @ FineticError::InvalidTokenAccount,
         constraint = fee_account.mint == loan.stable_mint @ FineticError::MintMismatch
     )]
-    pub fee_account: Account<'info, TokenAccount>,
+    pub fee_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         constraint = escrow_collateral_account.owner == loan.key() @ FineticError::InvalidTokenAccount,
         constraint = escrow_collateral_account.mint == loan.collateral_mint @ FineticError::MintMismatch
     )]
-    pub escrow_collateral_account: Account<'info, TokenAccount>,
+    pub escrow_collateral_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         constraint = borrower_collateral_account.owner == borrower.key() @ FineticError::InvalidTokenAccount,
         constraint = borrower_collateral_account.mint == loan.collateral_mint @ FineticError::MintMismatch
     )]
-    pub borrower_collateral_account: Account<'info, TokenAccount>,
+    pub borrower_collateral_account: Box<Account<'info, TokenAccount>>,
 
     pub token_program: Program<'info, Token>,
 }
@@ -737,9 +737,9 @@ pub struct ClaimDefault<'info> {
         bump = loan.bump,
         has_one = lender @ FineticError::Unauthorized
     )]
-    pub loan: Account<'info, Loan>,
+    pub loan: Box<Account<'info, Loan>>,
     #[account(seeds = [b"protocol"], bump = protocol_state.bump)]
-    pub protocol_state: Account<'info, ProtocolState>,
+    pub protocol_state: Box<Account<'info, ProtocolState>>,
     #[account(mut)]
     pub lender: Signer<'info>,
 
@@ -748,13 +748,13 @@ pub struct ClaimDefault<'info> {
         constraint = escrow_collateral_account.owner == loan.key() @ FineticError::InvalidTokenAccount,
         constraint = escrow_collateral_account.mint == loan.collateral_mint @ FineticError::MintMismatch
     )]
-    pub escrow_collateral_account: Account<'info, TokenAccount>,
+    pub escrow_collateral_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         constraint = lender_collateral_account.owner == lender.key() @ FineticError::InvalidTokenAccount,
         constraint = lender_collateral_account.mint == loan.collateral_mint @ FineticError::MintMismatch
     )]
-    pub lender_collateral_account: Account<'info, TokenAccount>,
+    pub lender_collateral_account: Box<Account<'info, TokenAccount>>,
 
     pub token_program: Program<'info, Token>,
 }
@@ -767,7 +767,7 @@ pub struct RenewLoan<'info> {
         seeds = [b"loan", old_loan.loan_id.to_le_bytes().as_ref()],
         bump = old_loan.bump
     )]
-    pub old_loan: Account<'info, Loan>,
+    pub old_loan: Box<Account<'info, Loan>>,
     #[account(
         init,
         payer = borrower,
@@ -775,9 +775,9 @@ pub struct RenewLoan<'info> {
         seeds = [b"loan", new_loan_id.to_le_bytes().as_ref()],
         bump
     )]
-    pub new_loan: Account<'info, Loan>,
+    pub new_loan: Box<Account<'info, Loan>>,
     #[account(seeds = [b"protocol"], bump = protocol_state.bump)]
-    pub protocol_state: Account<'info, ProtocolState>,
+    pub protocol_state: Box<Account<'info, ProtocolState>>,
 
     #[account(mut)]
     pub borrower: Signer<'info>,
@@ -788,13 +788,13 @@ pub struct RenewLoan<'info> {
         constraint = borrower_stable_account.owner == borrower.key() @ FineticError::InvalidTokenAccount,
         constraint = borrower_stable_account.mint == old_loan.stable_mint @ FineticError::MintMismatch
     )]
-    pub borrower_stable_account: Account<'info, TokenAccount>,
+    pub borrower_stable_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         constraint = fee_account.owner == protocol_state.fee_wallet @ FineticError::InvalidTokenAccount,
         constraint = fee_account.mint == old_loan.stable_mint @ FineticError::MintMismatch
     )]
-    pub fee_account: Account<'info, TokenAccount>,
+    pub fee_account: Box<Account<'info, TokenAccount>>,
 
     // Escrow accounts for collateral transfer from old loan to new loan
     #[account(
@@ -802,12 +802,12 @@ pub struct RenewLoan<'info> {
         constraint = old_escrow_collateral_account.owner == old_loan.key() @ FineticError::InvalidTokenAccount,
         constraint = old_escrow_collateral_account.mint == old_loan.collateral_mint @ FineticError::MintMismatch
     )]
-    pub old_escrow_collateral_account: Account<'info, TokenAccount>,
+    pub old_escrow_collateral_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         constraint = new_escrow_collateral_account.mint == old_loan.collateral_mint @ FineticError::MintMismatch
     )]
-    pub new_escrow_collateral_account: Account<'info, TokenAccount>,
+    pub new_escrow_collateral_account: Box<Account<'info, TokenAccount>>,
 
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
