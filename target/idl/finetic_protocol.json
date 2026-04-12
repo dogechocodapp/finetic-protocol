@@ -1,0 +1,289 @@
+{
+  "version": "0.1.0",
+  "name": "finetic_protocol",
+  "instructions": [
+    {
+      "name": "initialize",
+      "accounts": [
+        { "name": "protocolState", "isMut": true, "isSigner": false },
+        { "name": "admin", "isMut": true, "isSigner": true },
+        { "name": "feeWallet", "isMut": false, "isSigner": false },
+        { "name": "insuranceWallet", "isMut": false, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": []
+    },
+    {
+      "name": "createOffer",
+      "accounts": [
+        { "name": "offer", "isMut": true, "isSigner": false },
+        { "name": "lender", "isMut": true, "isSigner": true },
+        { "name": "stableMint", "isMut": false, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "offerId", "type": "u64" },
+        { "name": "amount", "type": "u64" },
+        { "name": "interestTier", "type": "u8" },
+        { "name": "termMonths", "type": "u8" },
+        { "name": "minAmount", "type": "u64" }
+      ]
+    },
+    {
+      "name": "cancelOffer",
+      "accounts": [
+        { "name": "offer", "isMut": true, "isSigner": false },
+        { "name": "lender", "isMut": false, "isSigner": true }
+      ],
+      "args": []
+    },
+    {
+      "name": "executeLoan",
+      "accounts": [
+        { "name": "offer", "isMut": true, "isSigner": false },
+        { "name": "loan", "isMut": true, "isSigner": false },
+        { "name": "protocolState", "isMut": true, "isSigner": false },
+        { "name": "lender", "isMut": true, "isSigner": true },
+        { "name": "borrower", "isMut": true, "isSigner": true },
+        { "name": "collateralMint", "isMut": false, "isSigner": false },
+        { "name": "borrowerCollateralAccount", "isMut": true, "isSigner": false },
+        { "name": "escrowCollateralAccount", "isMut": true, "isSigner": false },
+        { "name": "lenderStableAccount", "isMut": true, "isSigner": false },
+        { "name": "borrowerStableAccount", "isMut": true, "isSigner": false },
+        { "name": "feeAccount", "isMut": true, "isSigner": false },
+        { "name": "insuranceAccount", "isMut": true, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "loanId", "type": "u64" },
+        { "name": "collateralAmount", "type": "u64" },
+        { "name": "loanAmount", "type": "u64" }
+      ]
+    },
+    {
+      "name": "repayLoan",
+      "accounts": [
+        { "name": "loan", "isMut": true, "isSigner": false },
+        { "name": "protocolState", "isMut": false, "isSigner": false },
+        { "name": "borrower", "isMut": true, "isSigner": true },
+        { "name": "borrowerStableAccount", "isMut": true, "isSigner": false },
+        { "name": "lenderStableAccount", "isMut": true, "isSigner": false },
+        { "name": "feeAccount", "isMut": true, "isSigner": false },
+        { "name": "escrowCollateralAccount", "isMut": true, "isSigner": false },
+        { "name": "borrowerCollateralAccount", "isMut": true, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": []
+    },
+    {
+      "name": "claimDefault",
+      "accounts": [
+        { "name": "loan", "isMut": true, "isSigner": false },
+        { "name": "protocolState", "isMut": false, "isSigner": false },
+        { "name": "lender", "isMut": true, "isSigner": true },
+        { "name": "escrowCollateralAccount", "isMut": true, "isSigner": false },
+        { "name": "lenderCollateralAccount", "isMut": true, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": []
+    },
+    {
+      "name": "renewLoan",
+      "accounts": [
+        { "name": "oldLoan", "isMut": true, "isSigner": false },
+        { "name": "newLoan", "isMut": true, "isSigner": false },
+        { "name": "protocolState", "isMut": false, "isSigner": false },
+        { "name": "borrower", "isMut": true, "isSigner": true },
+        { "name": "lender", "isMut": false, "isSigner": true },
+        { "name": "borrowerStableAccount", "isMut": true, "isSigner": false },
+        { "name": "feeAccount", "isMut": true, "isSigner": false },
+        { "name": "oldEscrowCollateralAccount", "isMut": true, "isSigner": false },
+        { "name": "newEscrowCollateralAccount", "isMut": true, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "newLoanId", "type": "u64" }
+      ]
+    },
+    {
+      "name": "setPaused",
+      "accounts": [
+        { "name": "protocolState", "isMut": true, "isSigner": false },
+        { "name": "admin", "isMut": false, "isSigner": true }
+      ],
+      "args": [
+        { "name": "paused", "type": "bool" }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "ProtocolState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "admin", "type": "publicKey" },
+          { "name": "feeWallet", "type": "publicKey" },
+          { "name": "insuranceWallet", "type": "publicKey" },
+          { "name": "totalLoans", "type": "u64" },
+          { "name": "totalVolume", "type": "u64" },
+          { "name": "totalFeesCollected", "type": "u64" },
+          { "name": "bump", "type": "u8" },
+          { "name": "isPaused", "type": "bool" },
+          { "name": "version", "type": "u8" },
+          { "name": "reserved", "type": "bytes" }
+        ]
+      }
+    },
+    {
+      "name": "Offer",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "offerId", "type": "u64" },
+          { "name": "lender", "type": "publicKey" },
+          { "name": "stableMint", "type": "publicKey" },
+          { "name": "amount", "type": "u64" },
+          { "name": "minAmount", "type": "u64" },
+          { "name": "interestTier", "type": "u8" },
+          { "name": "termMonths", "type": "u8" },
+          { "name": "isActive", "type": "bool" },
+          { "name": "createdAt", "type": "i64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "Loan",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "loanId", "type": "u64" },
+          { "name": "offerId", "type": "u64" },
+          { "name": "lender", "type": "publicKey" },
+          { "name": "borrower", "type": "publicKey" },
+          { "name": "stableMint", "type": "publicKey" },
+          { "name": "collateralMint", "type": "publicKey" },
+          { "name": "loanAmount", "type": "u64" },
+          { "name": "collateralAmount", "type": "u64" },
+          { "name": "interestTier", "type": "u8" },
+          { "name": "interestFeeBps", "type": "u64" },
+          { "name": "originationFee", "type": "u64" },
+          { "name": "insuranceReserve", "type": "u64" },
+          { "name": "termMonths", "type": "u8" },
+          { "name": "startedAt", "type": "i64" },
+          { "name": "maturesAt", "type": "i64" },
+          { "name": "repaidAt", "type": "i64" },
+          { "name": "status", "type": { "defined": "LoanStatus" } },
+          { "name": "referralPlatform", "type": "publicKey" },
+          { "name": "renewalCount", "type": "u8" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "LoanStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          { "name": "Active" },
+          { "name": "RepaidEarly50" },
+          { "name": "RepaidEarly" },
+          { "name": "RepaidOnTime" },
+          { "name": "Renewed" },
+          { "name": "Defaulted" }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "OfferCreated",
+      "fields": [
+        { "name": "offerId", "type": "u64", "index": false },
+        { "name": "lender", "type": "publicKey", "index": false },
+        { "name": "amount", "type": "u64", "index": false },
+        { "name": "interestTier", "type": "u8", "index": false },
+        { "name": "termMonths", "type": "u8", "index": false }
+      ]
+    },
+    {
+      "name": "OfferCancelled",
+      "fields": [
+        { "name": "offerId", "type": "u64", "index": false },
+        { "name": "lender", "type": "publicKey", "index": false }
+      ]
+    },
+    {
+      "name": "LoanExecuted",
+      "fields": [
+        { "name": "loanId", "type": "u64", "index": false },
+        { "name": "offerId", "type": "u64", "index": false },
+        { "name": "lender", "type": "publicKey", "index": false },
+        { "name": "borrower", "type": "publicKey", "index": false },
+        { "name": "loanAmount", "type": "u64", "index": false },
+        { "name": "collateralAmount", "type": "u64", "index": false },
+        { "name": "interestTier", "type": "u8", "index": false },
+        { "name": "maturesAt", "type": "i64", "index": false }
+      ]
+    },
+    {
+      "name": "LoanRepaid",
+      "fields": [
+        { "name": "loanId", "type": "u64", "index": false },
+        { "name": "borrower", "type": "publicKey", "index": false },
+        { "name": "lender", "type": "publicKey", "index": false },
+        { "name": "totalRepaid", "type": "u64", "index": false },
+        { "name": "interestPaid", "type": "u64", "index": false },
+        { "name": "platformFee", "type": "u64", "index": false },
+        { "name": "status", "type": { "defined": "LoanStatus" }, "index": false }
+      ]
+    },
+    {
+      "name": "LoanDefaulted",
+      "fields": [
+        { "name": "loanId", "type": "u64", "index": false },
+        { "name": "lender", "type": "publicKey", "index": false },
+        { "name": "borrower", "type": "publicKey", "index": false },
+        { "name": "collateralAmount", "type": "u64", "index": false },
+        { "name": "insuranceReserve", "type": "u64", "index": false }
+      ]
+    },
+    {
+      "name": "LoanRenewed",
+      "fields": [
+        { "name": "oldLoanId", "type": "u64", "index": false },
+        { "name": "newLoanId", "type": "u64", "index": false },
+        { "name": "newDebt", "type": "u64", "index": false },
+        { "name": "newTier", "type": "u8", "index": false },
+        { "name": "newOriginationFee", "type": "u64", "index": false },
+        { "name": "maturesAt", "type": "i64", "index": false }
+      ]
+    }
+  ],
+  "errors": [
+    { "code": 6000, "name": "InvalidTier", "msg": "Invalid interest tier" },
+    { "code": 6001, "name": "InvalidTerm", "msg": "Invalid loan term — must be 12 or 24 months" },
+    { "code": 6002, "name": "InvalidAmount", "msg": "Invalid amount" },
+    { "code": 6003, "name": "OfferNotActive", "msg": "Offer is not active" },
+    { "code": 6004, "name": "LoanNotActive", "msg": "Loan is not active" },
+    { "code": 6005, "name": "Unauthorized", "msg": "Unauthorized" },
+    { "code": 6006, "name": "ExceedsOffer", "msg": "Loan amount exceeds offer" },
+    { "code": 6007, "name": "BelowMinimum", "msg": "Loan amount below minimum" },
+    { "code": 6008, "name": "ProtocolPaused", "msg": "Protocol is paused" },
+    { "code": 6009, "name": "LoanNotExpired", "msg": "Loan has not expired yet" },
+    { "code": 6010, "name": "LoanExpired", "msg": "Loan has expired — cannot repay" },
+    { "code": 6011, "name": "TooEarlyToRenew", "msg": "Too early to renew — must be within 7 days of maturity" },
+    { "code": 6012, "name": "ArithmeticOverflow", "msg": "Arithmetic overflow" },
+    { "code": 6013, "name": "MintMismatch", "msg": "Token account mint mismatch" },
+    { "code": 6014, "name": "InvalidTokenAccount", "msg": "Invalid token account owner" },
+    { "code": 6015, "name": "MaxRenewalsReached", "msg": "Maximum renewal limit reached" }
+  ],
+  "metadata": {
+    "address": "3vhsPAwd9XFBidzPBxZfyrHKrF1G12qMuyaM6fwVbC8Q"
+  }
+}

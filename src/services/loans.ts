@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { connection, getOfferPDA, getLoanPDA, toTokenAmount, TOKEN_DECIMALS, TOKEN_MINTS, FINETIC_PROGRAM_ID } from '@/lib/solana';
+import { connection, getLoanPDA, toTokenAmount, TOKEN_DECIMALS, TOKEN_MINTS } from '@/lib/solana';
 import {
   getProgram,
   buildExecuteLoanTx,
@@ -97,7 +97,7 @@ export const loansService = {
     const txSignature = await params.borrowerWallet.sendTransaction(tx, connection);
     await connection.confirmTransaction(txSignature, 'confirmed');
 
-    // Record loan in Supabase
+    // Record loan in Supabase with on-chain ID for future lookups
     const [loanPDA] = getLoanPDA(params.on_chain_loan_id);
     const { data, error } = await supabase
       .from('loans')
@@ -117,6 +117,7 @@ export const loansService = {
         insurance_reserve: fees.insurance_reserve,
         amount_disbursed: fees.amount_disbursed,
         escrow_address: loanPDA.toBase58(),
+        on_chain_loan_id: params.on_chain_loan_id,
         collateral_tx_signature: txSignature,
         status: 'active',
         started_at: now.toISOString(),
@@ -207,9 +208,7 @@ export const loansService = {
     const program = getProgram(borrowerWallet);
     const stableMint = TOKEN_MINTS[loan.stable_token];
     const collateralMint = TOKEN_MINTS[loan.collateral_token];
-
-    // Derive on-chain loan ID from escrow_address PDA
-    const onChainLoanId = deriveOnChainLoanId(loan);
+    const onChainLoanId = getOnChainLoanId(loan);
 
     const tx = await buildRepayLoanTx(program, {
       loanId: onChainLoanId,
@@ -301,7 +300,7 @@ export const loansService = {
     // Build and send Solana transaction
     const program = getProgram(lenderWallet);
     const collateralMint = TOKEN_MINTS[loan.collateral_token];
-    const onChainLoanId = deriveOnChainLoanId(loan);
+    const onChainLoanId = getOnChainLoanId(loan);
 
     const tx = await buildClaimDefaultTx(program, {
       loanId: onChainLoanId,
@@ -364,11 +363,16 @@ export const loansService = {
   },
 };
 
-/** Derive on-chain loan ID from the DB loan record */
-function deriveOnChainLoanId(loan: LoanWithParties): number {
-  // The on_chain_loan_id is stored as part of the escrow_address derivation
-  // For now, use a hash of the DB loan ID as the on-chain identifier
-  // In production, store the on_chain_loan_id in the DB when executing the loan
+/**
+ * Resolve the on-chain loan ID from the database record.
+ * Uses the stored on_chain_loan_id field (set during executeLoan).
+ * Falls back to a deterministic hash of the DB UUID for legacy records.
+ */
+function getOnChainLoanId(loan: LoanWithParties): number {
+  if ((loan as any).on_chain_loan_id != null) {
+    return (loan as any).on_chain_loan_id;
+  }
+  // Legacy fallback: deterministic ID from DB UUID
   const hash = loan.id.replace(/-/g, '').slice(0, 16);
   return parseInt(hash, 16) % 2147483647;
 }

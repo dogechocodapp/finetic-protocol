@@ -4,9 +4,12 @@ import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from '@solana/spl-token';
 import { connection, FINETIC_PROGRAM_ID, getOfferPDA, getLoanPDA, getProtocolStatePDA } from './solana';
 import idl from '../../target/idl/finetic_protocol.json';
 
-// Fee wallet — Finetic's fee collection address (admin-controlled)
+// Finetic protocol wallets — set via env or fallback to devnet defaults
 const FEE_WALLET = new PublicKey(
   process.env.NEXT_PUBLIC_FEE_WALLET || '47hsgTnKdJ8XDJR2L46BNRHRiEg52rFX6NxxrLhHdNC2'
+);
+const INSURANCE_WALLET = new PublicKey(
+  process.env.NEXT_PUBLIC_INSURANCE_WALLET || '47hsgTnKdJ8XDJR2L46BNRHRiEg52rFX6NxxrLhHdNC2'
 );
 
 export function getProgram(wallet: any): Program {
@@ -16,6 +19,10 @@ export function getProgram(wallet: any): Program {
   });
   return new Program(idl as any, provider);
 }
+
+// ============================================
+// Execute Loan
+// ============================================
 
 export interface ExecuteLoanOnChainParams {
   offerId: number;
@@ -57,6 +64,10 @@ export async function buildExecuteLoanTx(
     params.stableMint,
     FEE_WALLET,
   );
+  const insuranceAta = await getAssociatedTokenAddress(
+    params.stableMint,
+    INSURANCE_WALLET,
+  );
 
   return program.methods
     .executeLoan(
@@ -76,11 +87,16 @@ export async function buildExecuteLoanTx(
       lenderStableAccount: lenderStableAta,
       borrowerStableAccount: borrowerStableAta,
       feeAccount: feeAta,
+      insuranceAccount: insuranceAta,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
     })
     .transaction();
 }
+
+// ============================================
+// Repay Loan
+// ============================================
 
 export interface RepayLoanOnChainParams {
   loanId: number;
@@ -95,6 +111,7 @@ export async function buildRepayLoanTx(
   params: RepayLoanOnChainParams,
 ) {
   const [loanPDA] = getLoanPDA(params.loanId);
+  const [protocolStatePDA] = getProtocolStatePDA();
 
   const borrowerStableAta = await getAssociatedTokenAddress(
     params.stableMint,
@@ -122,6 +139,7 @@ export async function buildRepayLoanTx(
     .repayLoan()
     .accounts({
       loan: loanPDA,
+      protocolState: protocolStatePDA,
       borrower: params.borrowerWallet,
       borrowerStableAccount: borrowerStableAta,
       lenderStableAccount: lenderStableAta,
@@ -132,6 +150,10 @@ export async function buildRepayLoanTx(
     })
     .transaction();
 }
+
+// ============================================
+// Claim Default
+// ============================================
 
 export interface ClaimDefaultOnChainParams {
   loanId: number;
@@ -144,6 +166,7 @@ export async function buildClaimDefaultTx(
   params: ClaimDefaultOnChainParams,
 ) {
   const [loanPDA] = getLoanPDA(params.loanId);
+  const [protocolStatePDA] = getProtocolStatePDA();
 
   const escrowCollateralAta = await getAssociatedTokenAddress(
     params.collateralMint,
@@ -159,6 +182,7 @@ export async function buildClaimDefaultTx(
     .claimDefault()
     .accounts({
       loan: loanPDA,
+      protocolState: protocolStatePDA,
       lender: params.lenderWallet,
       escrowCollateralAccount: escrowCollateralAta,
       lenderCollateralAccount: lenderCollateralAta,
@@ -167,10 +191,15 @@ export async function buildClaimDefaultTx(
     .transaction();
 }
 
+// ============================================
+// Renew Loan
+// ============================================
+
 export interface RenewLoanOnChainParams {
   oldLoanId: number;
   newLoanId: number;
   stableMint: PublicKey;
+  collateralMint: PublicKey;
   borrowerWallet: PublicKey;
   lenderWallet: PublicKey;
 }
@@ -181,6 +210,7 @@ export async function buildRenewLoanTx(
 ) {
   const [oldLoanPDA] = getLoanPDA(params.oldLoanId);
   const [newLoanPDA] = getLoanPDA(params.newLoanId);
+  const [protocolStatePDA] = getProtocolStatePDA();
 
   const borrowerStableAta = await getAssociatedTokenAddress(
     params.stableMint,
@@ -190,16 +220,29 @@ export async function buildRenewLoanTx(
     params.stableMint,
     FEE_WALLET,
   );
+  const oldEscrowCollateralAta = await getAssociatedTokenAddress(
+    params.collateralMint,
+    oldLoanPDA,
+    true,
+  );
+  const newEscrowCollateralAta = await getAssociatedTokenAddress(
+    params.collateralMint,
+    newLoanPDA,
+    true,
+  );
 
   return program.methods
     .renewLoan(new BN(params.newLoanId))
     .accounts({
       oldLoan: oldLoanPDA,
       newLoan: newLoanPDA,
+      protocolState: protocolStatePDA,
       borrower: params.borrowerWallet,
       lender: params.lenderWallet,
       borrowerStableAccount: borrowerStableAta,
       feeAccount: feeAta,
+      oldEscrowCollateralAccount: oldEscrowCollateralAta,
+      newEscrowCollateralAccount: newEscrowCollateralAta,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
     })
